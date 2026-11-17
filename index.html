@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChemScoper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="panel">
+    <h1>ChemScoper</h1>
+    <p class="lead">분자량(g/mol)을 입력하면 일치하는 분자를 찾아 공-막대 모형으로 보여줍니다.</p>
+
+    <form id="search" autocomplete="off">
+      <label for="mw">분자량 (g/mol)</label>
+      <input id="mw" type="number" step="any" min="0" placeholder="예: 18.015" required>
+      <label for="tol">허용 오차 (±)</label>
+      <input id="tol" type="number" step="any" min="0" value="0.1">
+      <button type="submit">모형 그리기</button>
+    </form>
+
+    <p id="msg" class="msg" role="status"></p>
+    <ul id="results" class="results"></ul>
+
+    <section class="info" id="info" hidden>
+      <h2 id="name"></h2>
+      <dl id="infoList"></dl>
+    </section>
+
+    <section class="all">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabInorg" aria-selected="true">무기물</button>
+        <button type="button" role="tab" id="tabOrg" aria-selected="false">유기물</button>
+        <button type="button" role="tab" id="tabAtom" aria-selected="false">원자</button>
+        <small id="count"></small>
+      </div>
+      <input id="q" type="search" placeholder="이름·화학식·분자량 검색 (예: 포도당, C6H12O6)" aria-label="분자 검색">
+      <div class="sort" role="radiogroup" aria-label="정렬">
+        <label><input type="radio" name="sort" value="mw" checked> 분자량·원자량순</label>
+        <label><input type="radio" name="sort" value="name"> 가나다순</label>
+      </div>
+      <ul id="catalog"></ul>
+      <ul id="matList" hidden></ul>
+      <div id="atomWrap" class="atomwrap" hidden>
+        <table id="atoms">
+          <thead><tr><th>번호</th><th>기호</th><th>이름</th><th>원자량</th><th>공유 반지름 (pm)</th><th>반데르발스 반지름 (pm)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+      <section id="detail" class="detail" hidden></section>
+
+    <details class="help">
+      <summary>도움말 · 용어 풀이</summary>
+      <dl>
+        <h3>질량</h3>
+        <dt>원자량</dt><dd>원자 1개의 평균 질량을 탄소-12(=12)와 비교한 상대값입니다. 단위를 g/mol로 쓰면 원자 1몰의 질량이 됩니다.</dd>
+        <dt>분자량</dt><dd>분자를 이루는 모든 원자의 원자량을 더한 값입니다. 물(H₂O)은 1.008×2 + 15.999 ≈ 18.015입니다.</dd>
+        <dt>화학식량</dt><dd>이온 결정이나 그물 구조처럼 따로 떨어진 분자가 없는 물질에서, 화학식에 나온 원자들의 원자량을 더한 값입니다.</dd>
+        <h3>반지름</h3>
+        <dt>공유 반지름</dt><dd>같은 원자 2개가 공유결합했을 때 두 원자핵 사이 거리(결합 길이)의 절반입니다.</dd>
+        <dt>반데르발스 반지름</dt><dd>결합하지 않은 이웃 원자와 최대한 가까워질 수 있는 거리의 절반으로, 원자를 단단한 공으로 볼 때의 크기입니다. 공유 반지름보다 큽니다. 공간 채움 모형이 이 크기를 씁니다.</dd>
+        <dt>금속 반지름</dt><dd>금속 결정에서 이웃한 두 원자 중심 사이 거리의 절반입니다.</dd>
+        <dt>이온 반지름</dt><dd>이온 결정에서 이온이 차지하는 크기입니다. 양이온은 원래 원자보다 작고, 음이온은 원래 원자보다 큽니다.</dd>
+        <dt>반지름 값의 출처</dt><dd>공유 반지름은 Cordero 등의 문헌값, 반데르발스 반지름은 Bondi·Alvarez 등의 문헌값을 따른 대표값입니다. 금속 반지름은 금속 결정에서의 값이라 공유 반지름과 다를 수 있습니다.</dd>
+        <dt>pm, Å</dt><dd>길이 단위입니다. 1 Å = 100 pm = 10⁻¹⁰ m 입니다.</dd>
+        <h3>결정 구조</h3>
+        <dt>단위 격자</dt><dd>결정에서 반복되는 가장 작은 단위입니다. 이것을 상하좌우로 쌓으면 결정 전체가 됩니다.</dd>
+        <dt>격자 상수</dt><dd>단위 격자의 모서리 길이(a, c)입니다.</dd>
+        <dt>배위수</dt><dd>한 입자에 가장 가깝게 접해 있는 입자의 수입니다.</dd>
+        <dt>단순 입방 구조</dt><dd>정육면체 꼭짓점에만 원자가 있습니다. 배위수 6, 빈 공간이 많습니다(쌓임 비율 약 52%).</dd>
+        <dt>체심 입방 구조</dt><dd>꼭짓점과 정육면체 중심에 원자가 있습니다. 배위수 8, 쌓임 비율 약 68%.</dd>
+        <dt>면심 입방 구조</dt><dd>꼭짓점과 각 면의 중심에 원자가 있습니다. 배위수 12, 쌓임 비율 약 74%.</dd>
+        <dt>육방 밀집 구조</dt><dd>육각기둥 모양 단위 격자에서 층이 ABAB… 순서로 쌓입니다. 배위수 12, 쌓임 비율 약 74%로 면심 입방과 같습니다.</dd>
+        <h3>결합</h3>
+        <dt>이온 결합</dt><dd>양이온과 음이온 사이의 정전기적 인력입니다. 막대 대신 이온을 번갈아 배열해 보여줍니다.</dd>
+        <dt>금속 결합</dt><dd>금속 양이온이 규칙적으로 배열하고, 그 사이를 자유 전자가 움직이며 결합을 이룹니다. 하늘색 작은 구가 자유 전자입니다.</dd>
+        <dt>공유 결합 그물 구조</dt><dd>다이아몬드나 석영처럼 원자들이 공유결합으로 끝없이 이어진 구조입니다. 분자가 따로 없어 녹는점이 높습니다.</dd>
+        <dt>층상 구조</dt><dd>흑연처럼 층 안은 공유결합으로 단단하고, 층 사이는 약한 반데르발스 상호작용으로 쌓인 구조입니다.</dd>
+        <h3>모형 보기</h3>
+        <dt>공-막대 모형</dt><dd>원자를 작은 공, 결합을 막대로 그려 결합 모양을 보여주는 모형입니다.</dd>
+        <dt>공간 채움 모형</dt><dd>원자를 반데르발스 반지름 크기로 그려 분자가 실제로 차지하는 부피를 보여줍니다.</dd>
+        <dt>점(골격) 모형</dt><dd>입자를 작은 점으로, 단위 격자의 모서리를 막대로 그리고, 서로 맞닿은 입자 사이는 점선으로 이어 입자의 위치(골격)를 보여줍니다.</dd>
+        <dt>단면(공간 채움) 모형</dt><dd>단위 격자 안에 실제로 들어 있는 입자 부분만 남기고 잘라 보여줍니다. 꼭짓점 입자는 1/8, 면 중심 입자는 1/2만 남습니다.</dd>
+        <dt>입자의 점유 비율</dt><dd>단위 격자의 전체 부피 중 입자가 실제로 차지하는 부피의 비율입니다.</dd>
+        <dt>색</dt><dd>원소 색은 일반적인 관례(CPK)를 따릅니다. 예: 탄소 회색, 산소 빨강, 질소 파랑, 수소 흰색.</dd>
+        <dt>값의 정확도</dt><dd>결합 길이, 각도, 반지름은 대표적인 참고값입니다. 문헌이나 측정 방법에 따라 조금씩 다를 수 있습니다.</dd>
+      </dl>
+    </details>
+  </aside>
+
+  <main class="stage">
+    <div id="viewer" aria-label="3D 분자 모형"></div>
+    <div class="tools">
+      <label><input type="checkbox" id="spin" checked> 자동 회전</label>
+      <label id="spaceWrap"><input type="checkbox" id="space"> 공간 채움 모형</label>
+      <label id="cmodeWrap" hidden>모형
+        <select id="cmode"><option value="ball">쌓인 구</option><option value="dot">점(골격)</option><option value="fill">단면(공간 채움)</option></select>
+        <input type="checkbox" id="elec"> 자유 전자
+      </label>
+      <button type="button" id="reset">시점 초기화</button>
+    </div>
+    <ul class="legend" id="legend"></ul>
+    <p class="hint">드래그: 회전 · 휠/핀치: 확대·축소</p>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="detail.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
